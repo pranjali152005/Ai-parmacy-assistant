@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Order Medicine — PharmaAI</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<nav class="navbar">
+  <a href="Home.html" class="nav-logo"><div class="nav-logo-icon">💊</div><span class="nav-logo-text">PharmaAI</span></a>
+  <div class="nav-links">
+    <a href="Home.html" class="nav-link"><span class="icon">🏠</span> Home</a>
+    <a href="Chatbot.html" class="nav-link"><span class="icon">🤖</span> AI Assistant</a>
+    <a href="NearbyMedical.html" class="nav-link"><span class="icon">📍</span> Nearby</a>
+    <a href="OrderMedicine.html" class="nav-link active"><span class="icon">🛒</span> Order</a>
+    <a href="Reminder.html" class="nav-link"><span class="icon">⏰</span> Reminders</a>
+  </div>
+  <div class="nav-actions">
+    <div class="flex gap-2" style="align-items:center"><div class="pulse-dot"></div><span style="font-size:13px;color:var(--accent);font-weight:600;">AI Online</span></div>
+    <a href="Chatbot.html" class="btn btn-primary btn-sm">Ask AI 💬</a>
+  </div>
+</nav>
+<div id="toast-wrap" class="toast-wrap"></div>
+
+<div class="page-wrap">
+  <div class="container section" style="padding-top:36px;">
+    <div class="fade-up fade-up-1 mb-6">
+      <div class="section-label">Online Store</div>
+      <h1 class="section-title" style="font-size:36px;margin:4px 0 8px;">Order Medicine</h1>
+      <p style="color:var(--text-muted);font-size:15px;">Browse verified medicines and get them delivered to your door.</p>
+    </div>
+
+    <div class="order-grid">
+      <!-- Left: Medicine catalogue -->
+      <div>
+        <!-- Search & filter -->
+        <div class="card fade-up fade-up-2" style="padding:16px;margin-bottom:20px;">
+          <div class="flex gap-3" style="flex-wrap:wrap;">
+            <div class="search-bar" style="flex:1;min-width:200px;">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="medSearch" placeholder="Search medicine…" oninput="filterMeds()"/>
+            </div>
+            <select class="form-select" style="width:auto;min-width:150px;" onchange="filterByCategory(this.value)">
+              <option value="">All Categories</option>
+              <option>Analgesic</option>
+              <option>Antibiotic</option>
+              <option>Antidiabetic</option>
+              <option>Statin</option>
+              <option>PPI</option>
+              <option>Antihistamine</option>
+              <option>NSAID</option>
+              <option>ACE Inhibitor</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="medicineGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;"></div>
+      </div>
+
+      <!-- Right: Cart -->
+      <div>
+        <div class="card order-summary fade-up fade-up-3" style="position:sticky;top:84px;">
+          <h3 style="font-size:18px;font-weight:700;margin-bottom:16px;">🛒 Your Cart</h3>
+          <div id="cartItems"></div>
+          <div id="cartEmpty" style="text-align:center;padding:30px 0;color:var(--text-muted);">
+            <div style="font-size:36px;margin-bottom:10px;">🛒</div>
+            <p>Your cart is empty</p>
+            <p style="font-size:13px;margin-top:4px;">Add medicines from the catalogue</p>
+          </div>
+          <div id="cartSummary" class="hidden">
+            <div class="divider"></div>
+            <div class="summary-row"><span>Subtotal</span><span id="subtotal">₹0</span></div>
+            <div class="summary-row"><span>Delivery fee</span><span style="color:var(--accent)">FREE</span></div>
+            <div class="summary-row"><span>Discount</span><span style="color:var(--accent)" id="discount">-₹0</span></div>
+            <div class="summary-row total"><span>Total</span><span id="total" style="color:var(--accent)">₹0</span></div>
+            <div class="form-group mt-4">
+              <label class="form-label">Delivery Address</label>
+              <textarea class="form-textarea" id="deliveryAddr" placeholder="Enter your full delivery address…" rows="2"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Promo Code</label>
+              <div class="flex gap-2">
+                <input class="form-input" id="promoCode" placeholder="e.g. HEALTH10"/>
+                <button class="btn btn-outline btn-sm" onclick="applyPromo()">Apply</button>
+              </div>
+            </div>
+            <button class="btn btn-primary btn-full" onclick="placeOrder()">Place Order 🚀</button>
+            <button class="btn btn-outline btn-full mt-2" onclick="clearCart()">Clear Cart</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const MEDS = [
+  {id:'med_001',name:'Paracetamol',genericName:'Acetaminophen',category:'Analgesic',dosage:{adult:'500mg–1000mg every 4–6h'},uses:['Fever','Pain','Headache'],sideEffects:['Nausea (rare)'],interactions:['Warfarin'],contraindications:['Liver disease'],warnings:'Max 4g/day.',storage:'Below 25°C',price:12,stock:500,image:'💊'},
+  {id:'med_002',name:'Amoxicillin',genericName:'Amoxicillin trihydrate',category:'Antibiotic',dosage:{adult:'250mg–500mg every 8h'},uses:['Bacterial infections','UTI'],sideEffects:['Diarrhea','Rash'],interactions:['Warfarin'],contraindications:['Penicillin allergy'],warnings:'Complete full course.',storage:'Room temp',price:45,stock:320,image:'💉'},
+  {id:'med_003',name:'Metformin',genericName:'Metformin HCl',category:'Antidiabetic',dosage:{adult:'500mg–1000mg twice daily'},uses:['Type 2 diabetes','PCOS'],sideEffects:['Nausea'],interactions:['Alcohol'],contraindications:['Kidney disease'],warnings:'Stop before surgery.',storage:'Room temp',price:30,stock:410,image:'🔵'},
+  {id:'med_004',name:'Atorvastatin',genericName:'Atorvastatin calcium',category:'Statin',dosage:{adult:'10mg–80mg once daily'},uses:['High cholesterol'],sideEffects:['Muscle pain'],interactions:['Grapefruit juice'],contraindications:['Liver disease'],warnings:'Avoid grapefruit.',storage:'Room temp',price:55,stock:280,image:'🟡'},
+  {id:'med_005',name:'Omeprazole',genericName:'Omeprazole magnesium',category:'PPI',dosage:{adult:'20mg–40mg once daily'},uses:['Acid reflux','Ulcer'],sideEffects:['Headache'],interactions:['Clopidogrel'],contraindications:['PPI allergy'],warnings:'Monitor B12 long-term.',storage:'Below 25°C',price:38,stock:360,image:'🟣'},
+  {id:'med_006',name:'Cetirizine',genericName:'Cetirizine HCl',category:'Antihistamine',dosage:{adult:'10mg once daily'},uses:['Allergy','Hay fever'],sideEffects:['Drowsiness'],interactions:['Alcohol'],contraindications:['Kidney disease'],warnings:'May cause drowsiness.',storage:'Below 30°C',price:22,stock:450,image:'🌸'},
+  {id:'med_007',name:'Ibuprofen',genericName:'Ibuprofen',category:'NSAID',dosage:{adult:'200mg–400mg every 4–6h'},uses:['Pain','Inflammation'],sideEffects:['Stomach upset'],interactions:['Aspirin'],contraindications:['Peptic ulcer'],warnings:'Take with food.',storage:'Below 25°C',price:18,stock:520,image:'🔴'},
+  {id:'med_008',name:'Lisinopril',genericName:'Lisinopril',category:'ACE Inhibitor',dosage:{adult:'5mg–40mg once daily'},uses:['Hypertension','Heart failure'],sideEffects:['Dry cough'],interactions:['Potassium supplements'],contraindications:['Pregnancy'],warnings:'Report swelling.',storage:'Room temp',price:42,stock:290,image:'❤️'},
+];
+
+let cart = JSON.parse(localStorage.getItem('pharmaCart')||'[]');
+let filteredMeds = [...MEDS];
+let promoApplied = false;
+
+function renderMeds() {
+  const el = document.getElementById('medicineGrid');
+  el.innerHTML = filteredMeds.map(m=>`
+    <div class="card card-hover med-card fade-up" style="cursor:pointer;" onclick="showMedDetail('${m.id}')">
+      <div class="med-card-emoji">${m.image}</div>
+      <div class="med-name">${m.name}</div>
+      <div class="med-generic">${m.genericName}</div>
+      <div class="med-tags">
+        <span class="badge badge-blue" style="font-size:11px;">${m.category}</span>
+        <span class="badge ${m.stock>300?'badge-green':'badge-yellow'}" style="font-size:11px;">${m.stock>300?'In Stock':'Limited'}</span>
+      </div>
+      <div class="med-price">₹${m.price}</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">${m.uses[0]}</div>
+      <button class="btn btn-primary btn-sm w-full" onclick="event.stopPropagation();addToCart('${m.id}')">+ Add to Cart</button>
+    </div>
+  `).join('');
+}
+
+function filterMeds() {
+  const q = document.getElementById('medSearch').value.toLowerCase();
+  filteredMeds = MEDS.filter(m=>
+    !q || m.name.toLowerCase().includes(q) || m.genericName.toLowerCase().includes(q) || m.uses.some(u=>u.toLowerCase().includes(q))
+  );
+  renderMeds();
+}
+
+function filterByCategory(cat) {
+  filteredMeds = cat ? MEDS.filter(m=>m.category.toLowerCase().includes(cat.toLowerCase())) : [...MEDS];
+  renderMeds();
+}
+
+function addToCart(id) {
+  const m = MEDS.find(x=>x.id===id);
+  const ex = cart.find(c=>c.id===id);
+  if (ex) ex.qty++;
+  else cart.push({id,name:m.name,genericName:m.genericName,price:m.price,image:m.image,qty:1});
+  localStorage.setItem('pharmaCart', JSON.stringify(cart));
+  renderCart();
+  showToast(`${m.name} added to cart 🛒`, 'success');
+}
+
+function changeQty(id, delta) {
+  const item = cart.find(c=>c.id===id);
+  if (!item) return;
+  item.qty += delta;
+  if (item.qty <= 0) cart = cart.filter(c=>c.id!==id);
+  localStorage.setItem('pharmaCart', JSON.stringify(cart));
+  renderCart();
+}
+
+function renderCart() {
+  const itemsEl = document.getElementById('cartItems');
+  const summaryEl = document.getElementById('cartSummary');
+  const emptyEl = document.getElementById('cartEmpty');
+
+  if (!cart.length) {
+    itemsEl.innerHTML = '';
+    summaryEl.classList.add('hidden');
+    emptyEl.style.display = 'block';
+    return;
+  }
+  emptyEl.style.display = 'none';
+  summaryEl.classList.remove('hidden');
+
+  itemsEl.innerHTML = cart.map(item=>`
+    <div class="cart-item">
+      <div class="cart-emoji">${MEDS.find(m=>m.id===item.id)?.image||'💊'}</div>
+      <div class="cart-info">
+        <div class="cart-name">${item.name}</div>
+        <div class="cart-generic">${item.genericName||''}</div>
+      </div>
+      <div class="cart-qty">
+        <button class="qty-btn" onclick="changeQty('${item.id}',-1)">−</button>
+        <span class="qty-val">${item.qty}</span>
+        <button class="qty-btn" onclick="changeQty('${item.id}',1)">+</button>
+      </div>
+      <div class="cart-price">₹${item.price*item.qty}</div>
+    </div>
+  `).join('');
+
+  const sub = cart.reduce((s,i)=>s+i.price*i.qty,0);
+  const disc = promoApplied ? Math.round(sub*0.1) : 0;
+  document.getElementById('subtotal').textContent = `₹${sub}`;
+  document.getElementById('discount').textContent = `-₹${disc}`;
+  document.getElementById('total').textContent = `₹${sub-disc}`;
+}
+
+function clearCart() {
+  cart = [];
+  localStorage.setItem('pharmaCart', '[]');
+  renderCart();
+  showToast('Cart cleared', 'info');
+}
+
+function applyPromo() {
+  const code = document.getElementById('promoCode').value.trim().toUpperCase();
+  if (code === 'HEALTH10') {
+    promoApplied = true;
+    renderCart();
+    showToast('Promo applied! 10% off 🎉', 'success');
+  } else {
+    showToast('Invalid promo code', 'error');
+  }
+}
+
+function placeOrder() {
+  const addr = document.getElementById('deliveryAddr').value.trim();
+  if (!cart.length) { showToast('Cart is empty', 'error'); return; }
+  if (!addr) { showToast('Enter delivery address', 'error'); return; }
+
+  const orderId = 'ORD' + String(Date.now()).slice(-6);
+  showToast(`✅ Order ${orderId} placed! Delivery in 30–60 min.`, 'success');
+  cart = [];
+  localStorage.setItem('pharmaCart','[]');
+  promoApplied = false;
+  renderCart();
+  document.getElementById('deliveryAddr').value = '';
+}
+
+function showMedDetail(id) {
+  const m = MEDS.find(x=>x.id===id);
+  if (!m) return;
+  const ov = document.createElement('div');
+  ov.className='modal-overlay';
+  ov.innerHTML=`<div class="modal" style="position:relative;">
+    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    <div style="font-size:48px;margin-bottom:10px;">${m.image}</div>
+    <h2 style="font-size:22px;font-weight:800;margin-bottom:4px;">${m.name}</h2>
+    <p style="color:var(--text-muted);margin-bottom:16px;">${m.genericName} · ${m.category}</p>
+    <div class="grid-2 gap-3 mb-4">
+      <div class="card" style="padding:14px;"><div style="font-size:11px;color:var(--text-muted);">Dose (Adult)</div><div style="font-size:13px;font-weight:600;margin-top:4px;">${m.dosage.adult}</div></div>
+      <div class="card" style="padding:14px;"><div style="font-size:11px;color:var(--text-muted);">Price</div><div style="font-size:18px;font-weight:800;color:var(--accent);margin-top:2px;">₹${m.price}</div></div>
+    </div>
+    <div class="mb-3"><div style="font-size:13px;color:var(--text-muted);margin-bottom:8px;font-weight:600;">Uses</div><div style="display:flex;flex-wrap:wrap;gap:6px;">${m.uses.map(u=>`<span class="badge badge-blue">${u}</span>`).join('')}</div></div>
+    <div class="mb-3"><div style="font-size:13px;color:var(--text-muted);margin-bottom:8px;font-weight:600;">Side Effects</div><div style="display:flex;flex-wrap:wrap;gap:6px;">${m.sideEffects.map(s=>`<span class="badge badge-yellow">${s}</span>`).join('')}</div></div>
+    <div class="card" style="padding:12px;border-left:3px solid var(--warning);background:rgba(245,158,11,0.07);margin-bottom:16px;">
+      <div style="font-size:11px;color:var(--warning);font-weight:600;margin-bottom:4px;">⚠️ Warning</div>
+      <div style="font-size:13px;color:var(--text-muted);">${m.warnings}</div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="addToCart('${m.id}');this.closest('.modal-overlay').remove()">🛒 Add to Cart — ₹${m.price}</button>
+  </div>`;
+  ov.addEventListener('click',e=>{if(e.target===ov)ov.remove();});
+  document.body.appendChild(ov);
+}
+
+window.showToast = function(msg,type='info'){
+  const wrap=document.getElementById('toast-wrap');
+  const t=document.createElement('div');
+  t.className=`toast ${type}`;
+  const icon=type==='success'?'✅':type==='error'?'❌':'💡';
+  t.innerHTML=`<span>${icon}</span><span>${msg}</span>`;
+  wrap.appendChild(t);
+  setTimeout(()=>t.remove(),3500);
+};
+
+renderMeds();
+renderCart();
+</script>
+</body>
+</html>

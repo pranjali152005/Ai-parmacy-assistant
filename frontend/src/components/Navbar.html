@@ -1,0 +1,62 @@
+<!-- AI Pharmacy Assistant — Shared Navbar -->
+<!-- Include this snippet at the top of every page body -->
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<nav class="navbar">
+  <a href="Home.html" class="nav-logo">
+    <div class="nav-logo-icon">💊</div>
+    <span class="nav-logo-text">PharmaAI</span>
+  </a>
+
+  <div class="nav-links">
+    <a href="Home.html" class="nav-link" data-page="home">
+      <span class="icon">🏠</span> Home
+    </a>
+    <a href="Chatbot.html" class="nav-link" data-page="chatbot">
+      <span class="icon">🤖</span> AI Assistant
+    </a>
+    <a href="NearbyMedical.html" class="nav-link" data-page="nearby">
+      <span class="icon">📍</span> Nearby
+    </a>
+    <a href="OrderMedicine.html" class="nav-link" data-page="order">
+      <span class="icon">🛒</span> Order
+    </a>
+    <a href="Reminder.html" class="nav-link" data-page="reminder">
+      <span class="icon">⏰</span> Reminders
+    </a>
+  </div>
+
+  <div class="nav-actions">
+    <div class="flex gap-2" style="align-items:center">
+      <div class="pulse-dot"></div>
+      <span style="font-size:13px;color:var(--accent);font-weight:600;">AI Online</span>
+    </div>
+    <a href="Chatbot.html" class="btn btn-primary btn-sm">Ask AI 💬</a>
+  </div>
+</nav>
+
+<div id="toast-wrap" class="toast-wrap"></div>
+
+<script>
+// Active nav link highlight
+(function(){
+  const page = window.location.pathname.split('/').pop().replace('.html','').toLowerCase();
+  document.querySelectorAll('.nav-link[data-page]').forEach(a => {
+    if(a.dataset.page === page) a.classList.add('active');
+  });
+})();
+
+// Toast helper — available on all pages
+window.showToast = function(msg, type='info') {
+  const wrap = document.getElementById('toast-wrap');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  const icon = type==='success'?'✅':type==='error'?'❌':'💡';
+  t.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
+  wrap.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+};
+</script>

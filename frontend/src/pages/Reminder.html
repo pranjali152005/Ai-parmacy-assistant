@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Medicine Reminders — PharmaAI</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<nav class="navbar">
+  <a href="Home.html" class="nav-logo"><div class="nav-logo-icon">💊</div><span class="nav-logo-text">PharmaAI</span></a>
+  <div class="nav-links">
+    <a href="Home.html" class="nav-link"><span class="icon">🏠</span> Home</a>
+    <a href="Chatbot.html" class="nav-link"><span class="icon">🤖</span> AI Assistant</a>
+    <a href="NearbyMedical.html" class="nav-link"><span class="icon">📍</span> Nearby</a>
+    <a href="OrderMedicine.html" class="nav-link"><span class="icon">🛒</span> Order</a>
+    <a href="Reminder.html" class="nav-link active"><span class="icon">⏰</span> Reminders</a>
+  </div>
+  <div class="nav-actions">
+    <div class="flex gap-2" style="align-items:center"><div class="pulse-dot"></div><span style="font-size:13px;color:var(--accent);font-weight:600;">AI Online</span></div>
+    <a href="Chatbot.html" class="btn btn-primary btn-sm">Ask AI 💬</a>
+  </div>
+</nav>
+<div id="toast-wrap" class="toast-wrap"></div>
+
+<div class="page-wrap">
+  <div class="container section" style="padding-top:36px;">
+
+    <div class="flex-between mb-6 fade-up fade-up-1">
+      <div>
+        <div class="section-label">Stay on Track</div>
+        <h1 class="section-title" style="font-size:36px;margin:4px 0 8px;">Medicine Reminders</h1>
+        <p style="color:var(--text-muted);font-size:15px;">Never miss a dose. Set schedules and get notified on time.</p>
+      </div>
+      <button class="btn btn-primary" onclick="openAddModal()">+ Add Reminder</button>
+    </div>
+
+    <!-- Stats row -->
+    <div class="grid-4 mb-6 fade-up fade-up-2" id="statsRow">
+      <div class="card" style="padding:18px;">
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">Total Reminders</div>
+        <div style="font-size:28px;font-weight:800;color:var(--primary);" id="statTotal">0</div>
+      </div>
+      <div class="card" style="padding:18px;">
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">Active</div>
+        <div style="font-size:28px;font-weight:800;color:var(--accent);" id="statActive">0</div>
+      </div>
+      <div class="card" style="padding:18px;">
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">Today's Doses</div>
+        <div style="font-size:28px;font-weight:800;color:var(--warning);" id="statDoses">0</div>
+      </div>
+      <div class="card" style="padding:18px;">
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">Adherence</div>
+        <div style="font-size:28px;font-weight:800;color:var(--accent);" id="statAdherence">100%</div>
+      </div>
+    </div>
+
+    <!-- Today's schedule -->
+    <div class="card fade-up fade-up-3" style="padding:24px;margin-bottom:24px;" id="todayCard">
+      <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;">📅 Today's Schedule</h3>
+      <div id="todaySchedule" style="display:flex;flex-direction:column;gap:10px;"></div>
+    </div>
+
+    <!-- All reminders -->
+    <div class="fade-up fade-up-4">
+      <div class="flex-between mb-4">
+        <h3 style="font-size:18px;font-weight:700;">All Reminders</h3>
+        <div class="tabs" id="reminderFilter">
+          <button class="tab active" onclick="setRFilter('all',this)">All</button>
+          <button class="tab" onclick="setRFilter('active',this)">Active</button>
+          <button class="tab" onclick="setRFilter('inactive',this)">Paused</button>
+        </div>
+      </div>
+      <div id="reminderList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;"></div>
+      <div id="reminderEmpty" class="hidden" style="text-align:center;padding:60px 0;color:var(--text-muted);">
+        <div style="font-size:48px;margin-bottom:16px;">⏰</div>
+        <h3 style="font-size:18px;font-weight:700;margin-bottom:8px;">No reminders yet</h3>
+        <p>Add your first medicine reminder to stay on track</p>
+        <button class="btn btn-primary mt-4" onclick="openAddModal()">+ Add Reminder</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Reminder Modal -->
+<div id="reminderModal" class="modal-overlay hidden">
+  <div class="modal" style="max-width:520px;">
+    <h2 style="font-size:20px;font-weight:800;margin-bottom:20px;" id="modalTitle">⏰ Add Reminder</h2>
+    <div class="form-group">
+      <label class="form-label">Medicine Name *</label>
+      <input class="form-input" id="rMedName" placeholder="e.g. Metformin" list="medList"/>
+      <datalist id="medList">
+        <option value="Paracetamol"><option value="Amoxicillin"><option value="Metformin">
+        <option value="Atorvastatin"><option value="Omeprazole"><option value="Cetirizine">
+        <option value="Ibuprofen"><option value="Lisinopril">
+      </datalist>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Dosage</label>
+      <input class="form-input" id="rDosage" placeholder="e.g. 500mg, 1 tablet"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Reminder Times</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;" id="timesList"></div>
+      <div class="flex gap-2">
+        <input type="time" class="form-input" id="timeInput" style="width:auto;"/>
+        <button class="btn btn-outline btn-sm" onclick="addTime()">+ Add Time</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Days of Week</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="daysSelector">
+        <button class="day-chip on" data-day="Mon" onclick="toggleDay(this)">Mon</button>
+        <button class="day-chip on" data-day="Tue" onclick="toggleDay(this)">Tue</button>
+        <button class="day-chip on" data-day="Wed" onclick="toggleDay(this)">Wed</button>
+        <button class="day-chip on" data-day="Thu" onclick="toggleDay(this)">Thu</button>
+        <button class="day-chip on" data-day="Fri" onclick="toggleDay(this)">Fri</button>
+        <button class="day-chip" data-day="Sat" onclick="toggleDay(this)">Sat</button>
+        <button class="day-chip" data-day="Sun" onclick="toggleDay(this)">Sun</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notes (optional)</label>
+      <input class="form-input" id="rNotes" placeholder="e.g. Take with food"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">End Date (optional)</label>
+      <input type="date" class="form-input" id="rEndDate"/>
+    </div>
+    <div class="flex gap-3 mt-2">
+      <button class="btn btn-primary" style="flex:1" onclick="saveReminder()">Save Reminder ✅</button>
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let reminders = JSON.parse(localStorage.getItem('pharmaReminders')||'[]');
+let editingId = null;
+let selectedTimes = [];
+let reminderFilter = 'all';
+
+// Seed some defaults if empty
+if (!reminders.length) {
+  reminders = [
+    {id:'r1',medicineName:'Metformin',dosage:'500mg',times:['08:00','14:00','20:00'],days:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],isActive:true,notes:'Take with food'},
+    {id:'r2',medicineName:'Atorvastatin',dosage:'20mg',times:['21:00'],days:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],isActive:true,notes:'Take before bed'},
+    {id:'r3',medicineName:'Omeprazole',dosage:'20mg',times:['07:30'],days:['Mon','Tue','Wed','Thu','Fri'],isActive:false,notes:'Before breakfast'},
+  ];
+  localStorage.setItem('pharmaReminders', JSON.stringify(reminders));
+}
+
+function saveLS() { localStorage.setItem('pharmaReminders', JSON.stringify(reminders)); }
+
+function renderStats() {
+  const active = reminders.filter(r=>r.isActive);
+  const doses = active.reduce((s,r)=>s+r.times.length,0);
+  document.getElementById('statTotal').textContent = reminders.length;
+  document.getElementById('statActive').textContent = active.length;
+  document.getElementById('statDoses').textContent = doses;
+  document.getElementById('statAdherence').textContent = reminders.length ? Math.round((active.length/reminders.length)*100)+'%' : '100%';
+}
+
+function renderToday() {
+  const el = document.getElementById('todaySchedule');
+  const allSlots = [];
+  const now = new Date();
+  const nowMins = now.getHours()*60+now.getMinutes();
+  reminders.filter(r=>r.isActive).forEach(r=>{
+    r.times.forEach(t=>{
+      const [h,m] = t.split(':').map(Number);
+      const slotMins = h*60+m;
+      allSlots.push({time:t,name:r.medicineName,dosage:r.dosage,past:slotMins<nowMins,soon:slotMins>=nowMins&&slotMins-nowMins<60});
+    });
+  });
+  allSlots.sort((a,b)=>a.time.localeCompare(b.time));
+  if(!allSlots.length){el.innerHTML='<p style="color:var(--text-muted);font-size:14px;">No active reminders for today.</p>';return;}
+  el.innerHTML=allSlots.map(s=>`
+    <div class="card" style="padding:14px;display:flex;align-items:center;gap:14px;border-left:3px solid ${s.past?'var(--text-dim)':s.soon?'var(--warning)':'var(--primary)'};">
+      <div style="font-size:20px;">${s.past?'✅':'💊'}</div>
+      <div style="flex:1;">
+        <div style="font-size:14px;font-weight:700;color:${s.past?'var(--text-muted)':'var(--text)'};">${s.name}</div>
+        <div style="font-size:12px;color:var(--text-muted);">${s.dosage||''}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:15px;font-weight:700;color:${s.soon?'var(--warning)':'var(--primary)'};">${s.time}</div>
+        <div style="font-size:11px;color:var(--text-muted);">${s.past?'Done':s.soon?'Coming up':'Upcoming'}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderReminders() {
+  let list = [...reminders];
+  if(reminderFilter==='active') list=list.filter(r=>r.isActive);
+  if(reminderFilter==='inactive') list=list.filter(r=>!r.isActive);
+  const el=document.getElementById('reminderList');
+  const empty=document.getElementById('reminderEmpty');
+  if(!list.length){el.innerHTML='';empty.classList.remove('hidden');return;}
+  empty.classList.add('hidden');
+  el.innerHTML=list.map(r=>`
+    <div class="card reminder-card card-hover fade-up" id="rc-${r.id}">
+      <div class="reminder-header">
+        <div>
+          <div class="reminder-name">${r.medicineName}</div>
+          <div style="font-size:13px;color:var(--text-muted);">${r.dosage||'—'} ${r.notes?'· '+r.notes:''}</div>
+        </div>
+        <button class="toggle ${r.isActive?'on':''}" id="tog-${r.id}" onclick="toggleReminder('${r.id}')"></button>
+      </div>
+      <div class="reminder-times">${r.times.map(t=>`<span class="time-pill">⏰ ${t}</span>`).join('')}</div>
+      <div class="reminder-days mt-2">${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d=>`<div class="day-chip ${r.days.includes(d)?'on':''}">${d.slice(0,1)}</div>`).join('')}</div>
+      <div class="flex gap-2 mt-3">
+        <button class="btn btn-outline btn-sm" onclick="editReminder('${r.id}')">✏️ Edit</button>
+        <button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="deleteReminder('${r.id}')">🗑 Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function render() { renderStats(); renderToday(); renderReminders(); }
+
+function setRFilter(f,btn){
+  reminderFilter=f;
+  document.querySelectorAll('#reminderFilter .tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  renderReminders();
+}
+
+function toggleReminder(id) {
+  const r=reminders.find(x=>x.id===id);
+  if(r){r.isActive=!r.isActive;saveLS();render();}
+}
+function deleteReminder(id) {
+  if(!confirm('Delete this reminder?')) return;
+  reminders=reminders.filter(r=>r.id!==id);
+  saveLS();render();
+  showToast('Reminder deleted','info');
+}
+
+// ── Modal ──
+function openAddModal() {
+  editingId=null;
+  selectedTimes=[];
+  document.getElementById('rMedName').value='';
+  document.getElementById('rDosage').value='';
+  document.getElementById('rNotes').value='';
+  document.getElementById('rEndDate').value='';
+  document.getElementById('timesList').innerHTML='';
+  document.querySelectorAll('#daysSelector .day-chip').forEach((b,i)=>{ b.className='day-chip'+(i<5?' on':''); });
+  document.getElementById('modalTitle').textContent='⏰ Add Reminder';
+  document.getElementById('reminderModal').classList.remove('hidden');
+}
+function closeModal(){ document.getElementById('reminderModal').classList.add('hidden'); }
+
+function addTime() {
+  const t=document.getElementById('timeInput').value;
+  if(!t||selectedTimes.includes(t)){showToast('Invalid or duplicate time','error');return;}
+  selectedTimes.push(t);
+  renderTimes();
+}
+function renderTimes() {
+  document.getElementById('timesList').innerHTML=selectedTimes.map(t=>`
+    <span class="time-pill" style="cursor:pointer;" onclick="removeTime('${t}')">⏰ ${t} ✕</span>
+  `).join('');
+}
+function removeTime(t){ selectedTimes=selectedTimes.filter(x=>x!==t);renderTimes(); }
+function toggleDay(btn){ btn.classList.toggle('on'); }
+
+function editReminder(id) {
+  const r=reminders.find(x=>x.id===id);
+  if(!r) return;
+  editingId=id;
+  selectedTimes=[...r.times];
+  document.getElementById('rMedName').value=r.medicineName;
+  document.getElementById('rDosage').value=r.dosage||'';
+  document.getElementById('rNotes').value=r.notes||'';
+  document.getElementById('rEndDate').value=r.endDate||'';
+  renderTimes();
+  document.querySelectorAll('#daysSelector .day-chip').forEach(b=>{
+    b.className='day-chip'+(r.days.includes(b.dataset.day)?' on':'');
+  });
+  document.getElementById('modalTitle').textContent='✏️ Edit Reminder';
+  document.getElementById('reminderModal').classList.remove('hidden');
+}
+
+function saveReminder() {
+  const name=document.getElementById('rMedName').value.trim();
+  if(!name){showToast('Enter medicine name','error');return;}
+  if(!selectedTimes.length){showToast('Add at least one reminder time','error');return;}
+  const days=[...document.querySelectorAll('#daysSelector .day-chip.on')].map(b=>b.dataset.day);
+  if(!days.length){showToast('Select at least one day','error');return;}
+  const data={
+    medicineName:name,
+    dosage:document.getElementById('rDosage').value.trim(),
+    times:selectedTimes,
+    days,
+    notes:document.getElementById('rNotes').value.trim(),
+    endDate:document.getElementById('rEndDate').value||null,
+    isActive:true,
+  };
+  if(editingId){
+    const idx=reminders.findIndex(r=>r.id===editingId);
+    reminders[idx]={...reminders[idx],...data};
+    showToast('Reminder updated ✅','success');
+  } else {
+    reminders.push({id:'r'+Date.now(),...data});
+    showToast('Reminder added ⏰','success');
+  }
+  saveLS();
+  closeModal();
+  render();
+  requestNotifPermission();
+}
+
+function requestNotifPermission() {
+  if('Notification' in window && Notification.permission==='default') {
+    Notification.requestPermission();
+  }
+}
+
+window.showToast=function(msg,type='info'){
+  const wrap=document.getElementById('toast-wrap');
+  const t=document.createElement('div');
+  t.className=`toast ${type}`;
+  const icon=type==='success'?'✅':type==='error'?'❌':'💡';
+  t.innerHTML=`<span>${icon}</span><span>${msg}</span>`;
+  wrap.appendChild(t);
+  setTimeout(()=>t.remove(),3500);
+};
+
+// Check reminders every minute
+function checkDueReminders() {
+  const now=new Date();
+  const hm=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  reminders.filter(r=>r.isActive).forEach(r=>{
+    if(r.times.includes(hm) && Notification.permission==='granted') {
+      new Notification('💊 Medicine Reminder',{body:`Time to take ${r.medicineName} — ${r.dosage||''}`,icon:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">💊</text></svg>'});
+    }
+  });
+}
+setInterval(checkDueReminders, 60000);
+requestNotifPermission();
+render();
+</script>
+</body>
+</html>

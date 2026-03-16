@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Nearby Pharmacies — PharmaAI</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<nav class="navbar">
+  <a href="Home.html" class="nav-logo"><div class="nav-logo-icon">💊</div><span class="nav-logo-text">PharmaAI</span></a>
+  <div class="nav-links">
+    <a href="Home.html" class="nav-link"><span class="icon">🏠</span> Home</a>
+    <a href="Chatbot.html" class="nav-link"><span class="icon">🤖</span> AI Assistant</a>
+    <a href="NearbyMedical.html" class="nav-link active"><span class="icon">📍</span> Nearby</a>
+    <a href="OrderMedicine.html" class="nav-link"><span class="icon">🛒</span> Order</a>
+    <a href="Reminder.html" class="nav-link"><span class="icon">⏰</span> Reminders</a>
+  </div>
+  <div class="nav-actions">
+    <div class="flex gap-2" style="align-items:center"><div class="pulse-dot"></div><span style="font-size:13px;color:var(--accent);font-weight:600;">AI Online</span></div>
+    <a href="Chatbot.html" class="btn btn-primary btn-sm">Ask AI 💬</a>
+  </div>
+</nav>
+<div id="toast-wrap" class="toast-wrap"></div>
+
+<div class="page-wrap">
+  <div class="container section" style="padding-top:40px;">
+
+    <div class="fade-up fade-up-1 mb-6">
+      <div class="section-label">Near You</div>
+      <h1 class="section-title" style="font-size:36px;margin:4px 0 8px;">Nearby Pharmacies</h1>
+      <p style="color:var(--text-muted);font-size:15px;">Find open pharmacies, check hours, and get directions instantly.</p>
+    </div>
+
+    <!-- Search + filter bar -->
+    <div class="card fade-up fade-up-2" style="padding:20px;margin-bottom:24px;">
+      <div class="flex gap-3" style="flex-wrap:wrap;align-items:center;">
+        <div class="search-bar" style="flex:1;min-width:220px;">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="pharmaSearch" placeholder="Search pharmacy name or area…" oninput="filterPharmacies()"/>
+        </div>
+        <div class="tabs" id="filterTabs">
+          <button class="tab active" onclick="setFilter('all',this)">All</button>
+          <button class="tab" onclick="setFilter('open',this)">Open Now</button>
+          <button class="tab" onclick="setFilter('nearby',this)">Nearest First</button>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="getLocation()">📍 Use My Location</button>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 380px;gap:24px;" class="fade-up fade-up-3">
+
+      <!-- Pharmacy list -->
+      <div>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:14px;" id="resultCount">Showing 5 pharmacies</div>
+        <div id="pharmacyList" style="display:flex;flex-direction:column;gap:14px;"></div>
+      </div>
+
+      <!-- Map panel -->
+      <div>
+        <div class="map-wrap">
+          <div id="mapContainer" style="width:100%;height:100%;position:relative;background:var(--bg3);">
+            <!-- Fake interactive map -->
+            <svg width="100%" height="100%" viewBox="0 0 380 380" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;">
+              <!-- Grid lines -->
+              <defs>
+                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(14,165,233,0.08)" stroke-width="1"/>
+                </pattern>
+              </defs>
+              <rect width="380" height="380" fill="url(#grid)"/>
+              <!-- Roads -->
+              <line x1="0" y1="190" x2="380" y2="190" stroke="rgba(14,165,233,0.12)" stroke-width="8"/>
+              <line x1="190" y1="0" x2="190" y2="380" stroke="rgba(14,165,233,0.12)" stroke-width="8"/>
+              <line x1="0" y1="100" x2="380" y2="280" stroke="rgba(14,165,233,0.07)" stroke-width="5"/>
+              <line x1="0" y1="280" x2="380" y2="100" stroke="rgba(14,165,233,0.07)" stroke-width="5"/>
+              <!-- You are here -->
+              <circle cx="190" cy="190" r="14" fill="rgba(14,165,233,0.15)" stroke="var(--primary)" stroke-width="2"/>
+              <circle cx="190" cy="190" r="6" fill="var(--primary)"/>
+              <!-- Pharmacy pins -->
+              <g id="mapPins"></g>
+            </svg>
+            <div style="position:absolute;bottom:12px;left:12px;font-size:12px;color:var(--text-muted);">🔵 You · 🟢 Open · 🔴 Closed</div>
+          </div>
+        </div>
+        <!-- Selected pharmacy info -->
+        <div id="selectedPharmacy" class="card mt-3" style="padding:18px;display:none;">
+          <div id="selectedContent"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const PHARMACIES = [
+  { id:'ph_001', name:'MedCare Pharmacy', address:'MG Road, Pune', phone:'+91-20-1234-5678', openHours:'8 AM – 10 PM', rating:4.5, isOpen:true, distance:0.8, cx:240, cy:150 },
+  { id:'ph_002', name:'Apollo Pharmacy', address:'FC Road, Pune', phone:'+91-20-2345-6789', openHours:'9 AM – 9 PM', rating:4.7, isOpen:true, distance:1.2, cx:140, cy:220 },
+  { id:'ph_003', name:'HealthPlus Chemist', address:'Koregaon Park, Pune', phone:'+91-20-3456-7890', openHours:'24 Hours', rating:4.3, isOpen:true, distance:2.1, cx:290, cy:270 },
+  { id:'ph_004', name:'Wellness Pharmacy', address:'Baner, Pune', phone:'+91-20-4567-8901', openHours:'8 AM – 11 PM', rating:4.2, isOpen:false, distance:4.5, cx:80, cy:100 },
+  { id:'ph_005', name:'Lifeline Drugs', address:'Hadapsar, Pune', phone:'+91-20-5678-9012', openHours:'9 AM – 9 PM', rating:4.0, isOpen:true, distance:5.8, cx:320, cy:310 },
+];
+
+let activeFilter = 'all';
+let searchQ = '';
+let selectedId = null;
+
+function renderPharmacies() {
+  let list = [...PHARMACIES];
+  if (searchQ) list = list.filter(p => p.name.toLowerCase().includes(searchQ) || p.address.toLowerCase().includes(searchQ));
+  if (activeFilter === 'open') list = list.filter(p => p.isOpen);
+  if (activeFilter === 'nearby') list = list.sort((a,b) => a.distance - b.distance);
+
+  document.getElementById('resultCount').textContent = `Showing ${list.length} pharmacie${list.length!==1?'s':''}`;
+  const el = document.getElementById('pharmacyList');
+  el.innerHTML = list.map(p => `
+    <div class="card card-hover pharmacy-card fade-up" onclick="selectPharmacy('${p.id}')" style="cursor:pointer;${selectedId===p.id?'border-color:var(--primary);':''}" id="pc-${p.id}">
+      <div class="ph-header">
+        <div>
+          <div class="ph-name">${p.name}</div>
+          <div class="ph-address">📍 ${p.address}</div>
+        </div>
+        <div>
+          <div class="ph-rating">⭐ ${p.rating}</div>
+          <span class="badge ${p.isOpen?'badge-green':'badge-red'}" style="margin-top:4px">${p.isOpen?'Open':'Closed'}</span>
+        </div>
+      </div>
+      <div class="flex gap-3" style="font-size:13px;color:var(--text-muted);">
+        <span>🕐 ${p.openHours}</span>
+        <span class="ph-distance">📏 ${p.distance} km</span>
+      </div>
+      <div class="ph-actions">
+        <a href="tel:${p.phone}" class="btn btn-outline btn-sm" onclick="event.stopPropagation()">📞 Call</a>
+        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();getDirections('${p.id}')">🗺 Directions</button>
+        <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();orderFrom('${p.id}')">🛒 Order</button>
+      </div>
+    </div>
+  `).join('');
+
+  renderMapPins(list);
+}
+
+function renderMapPins(list) {
+  const pinsEl = document.getElementById('mapPins');
+  pinsEl.innerHTML = PHARMACIES.map(p => {
+    const isSelected = p.id === selectedId;
+    const color = p.isOpen ? '#06d6a0' : '#f43f5e';
+    const size = isSelected ? 14 : 10;
+    return `
+      <g onclick="selectPharmacy('${p.id}')" style="cursor:pointer;">
+        <circle cx="${p.cx}" cy="${p.cy}" r="${size+6}" fill="${color}22" stroke="${isSelected?color:'transparent'}" stroke-width="1.5"/>
+        <circle cx="${p.cx}" cy="${p.cy}" r="${size}" fill="${color}" opacity="${isSelected?1:0.8}"/>
+        <text x="${p.cx}" y="${p.cy+4}" text-anchor="middle" font-size="10" fill="white" font-weight="bold">P</text>
+        ${isSelected?`<text x="${p.cx}" y="${p.cy-18}" text-anchor="middle" font-size="9" fill="${color}">${p.name.split(' ')[0]}</text>`:''}
+      </g>
+    `;
+  }).join('');
+}
+
+function selectPharmacy(id) {
+  selectedId = id;
+  const p = PHARMACIES.find(x => x.id === id);
+  const el = document.getElementById('selectedPharmacy');
+  document.getElementById('selectedContent').innerHTML = `
+    <div class="flex-between mb-3">
+      <div>
+        <div style="font-size:16px;font-weight:700;">${p.name}</div>
+        <div style="font-size:13px;color:var(--text-muted);">📍 ${p.address}</div>
+      </div>
+      <span class="badge ${p.isOpen?'badge-green':'badge-red'}">${p.isOpen?'Open Now':'Closed'}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+      <div class="card" style="padding:10px;"><div style="font-size:11px;color:var(--text-muted);">Hours</div><div style="font-size:13px;font-weight:600;">🕐 ${p.openHours}</div></div>
+      <div class="card" style="padding:10px;"><div style="font-size:11px;color:var(--text-muted);">Rating</div><div style="font-size:13px;font-weight:600;">⭐ ${p.rating} / 5.0</div></div>
+      <div class="card" style="padding:10px;"><div style="font-size:11px;color:var(--text-muted);">Distance</div><div style="font-size:13px;font-weight:600;">📏 ${p.distance} km</div></div>
+      <div class="card" style="padding:10px;"><div style="font-size:11px;color:var(--text-muted);">Phone</div><div style="font-size:13px;font-weight:600;">${p.phone}</div></div>
+    </div>
+    <div class="flex gap-2">
+      <button class="btn btn-primary" style="flex:1" onclick="getDirections('${p.id}')">🗺 Get Directions</button>
+      <button class="btn btn-accent" style="flex:1" onclick="orderFrom('${p.id}')">🛒 Order Here</button>
+    </div>
+  `;
+  el.style.display = 'block';
+  renderPharmacies();
+}
+
+function setFilter(f, btn) {
+  activeFilter = f;
+  document.querySelectorAll('#filterTabs .tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  renderPharmacies();
+}
+
+function filterPharmacies() {
+  searchQ = document.getElementById('pharmaSearch').value.toLowerCase();
+  renderPharmacies();
+}
+
+function getLocation() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      pos => showToast(`📍 Location: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`, 'success'),
+      () => showToast('Location access denied.', 'error')
+    );
+  } else {
+    showToast('Geolocation not supported.', 'error');
+  }
+}
+
+function getDirections(id) {
+  const p = PHARMACIES.find(x=>x.id===id);
+  window.open(`https://www.google.com/maps/search/${encodeURIComponent(p.name+' '+p.address)}`, '_blank');
+}
+
+function orderFrom(id) {
+  sessionStorage.setItem('selectedPharmacy', id);
+  window.location.href = 'OrderMedicine.html';
+}
+
+window.showToast = function(msg, type='info') {
+  const wrap = document.getElementById('toast-wrap');
+  const t = document.createElement('div');
+  t.className=`toast ${type}`;
+  const icon=type==='success'?'✅':type==='error'?'❌':'💡';
+  t.innerHTML=`<span>${icon}</span><span>${msg}</span>`;
+  wrap.appendChild(t);
+  setTimeout(()=>t.remove(),3500);
+};
+
+renderPharmacies();
+</script>
+</body>
+</html>

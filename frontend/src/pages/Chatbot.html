@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>AI Assistant — PharmaAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0a0d14;
+      --surface: #111520;
+      --surface2: #161c2e;
+      --border: rgba(99,179,237,0.12);
+      --accent: #4fc3f7;
+      --accent2: #7c6ff7;
+      --success: #43e09c;
+      --warning: #ffd166;
+      --danger: #ff6b6b;
+      --text: #e8edf5;
+      --text-muted: #7a8aaa;
+      --text-dim: #4a5568;
+      --pill: rgba(79,195,247,0.1);
+      --radius: 14px;
+      --shadow: 0 8px 32px rgba(0,0,0,0.45);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Animated background ── */
+    .bg-grid {
+      position: fixed; inset: 0; z-index: 0;
+      background-image:
+        linear-gradient(rgba(79,195,247,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79,195,247,0.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+    }
+    .orb {
+      position: fixed; border-radius: 50%; filter: blur(90px); pointer-events: none; z-index: 0;
+      animation: float 8s ease-in-out infinite;
+    }
+    .orb-1 { width: 420px; height: 420px; background: rgba(124,111,247,0.12); top: -120px; right: -80px; animation-delay: 0s; }
+    .orb-2 { width: 320px; height: 320px; background: rgba(79,195,247,0.09); bottom: 60px; left: -60px; animation-delay: -4s; }
+    @keyframes float { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-28px) scale(1.04); } }
+
+    /* ── Nav ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; gap: 16px;
+      padding: 0 28px; height: 62px;
+      background: rgba(10,13,20,0.88);
+      backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo { display: flex; align-items: center; gap: 9px; text-decoration: none; }
+    .nav-logo-icon { font-size: 20px; }
+    .nav-logo-text { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px; color: var(--text); letter-spacing: -0.3px; }
+    .nav-links { display: flex; gap: 4px; margin-left: 18px; }
+    .nav-link {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 13px; border-radius: 9px;
+      font-size: 13px; font-weight: 500; color: var(--text-muted);
+      text-decoration: none; transition: all .2s;
+    }
+    .nav-link:hover { color: var(--text); background: var(--surface2); }
+    .nav-link.active { color: var(--accent); background: rgba(79,195,247,0.1); }
+    .nav-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+    .pulse-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(67,224,156,0.5); } 60% { box-shadow: 0 0 0 6px rgba(67,224,156,0); } }
+
+    /* ── Layout ── */
+    .page {
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column;
+      height: calc(100vh - 62px);
+    }
+    .container {
+      max-width: 900px; width: 100%;
+      margin: 0 auto; padding: 0 20px;
+      flex: 1; display: flex; flex-direction: column;
+      padding-top: 22px; padding-bottom: 18px;
+    }
+
+    /* ── Header ── */
+    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; }
+    .header-title { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; letter-spacing: -0.4px; }
+    .header-sub { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+    .header-actions { display: flex; gap: 8px; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      border-radius: 9px; font-size: 13px; font-weight: 500;
+      cursor: pointer; border: none; transition: all .18s; font-family: inherit;
+    }
+    .btn-sm { padding: 8px 14px; }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+      color: #fff;
+    }
+    .btn-primary:hover { opacity: .88; transform: translateY(-1px); }
+    .btn-outline {
+      background: transparent; color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+    .btn-outline:hover { color: var(--text); border-color: var(--accent); background: var(--pill); }
+    .btn-danger { background: rgba(255,107,107,0.12); color: var(--danger); border: 1px solid rgba(255,107,107,0.2); }
+    .btn-danger:hover { background: rgba(255,107,107,0.2); }
+
+    /* ── Quick chips ── */
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 7px 13px; border-radius: 20px; font-size: 12.5px; font-weight: 500;
+      background: var(--surface2); color: var(--text-muted);
+      border: 1px solid var(--border); cursor: pointer; transition: all .18s; user-select: none;
+    }
+    .chip:hover { color: var(--accent); border-color: var(--accent); background: var(--pill); transform: translateY(-1px); }
+
+    /* ── Chat window ── */
+    .chat-wrap {
+      flex: 1; overflow-y: auto; min-height: 0;
+      display: flex; flex-direction: column; gap: 14px;
+      padding: 18px 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      scroll-behavior: smooth;
+    }
+    .chat-wrap::-webkit-scrollbar { width: 5px; }
+    .chat-wrap::-webkit-scrollbar-track { background: transparent; }
+    .chat-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* Bubbles */
+    .bubble {
+      max-width: 78%; padding: 13px 16px;
+      border-radius: 14px; font-size: 14px; line-height: 1.65;
+      animation: fadeUp .25s ease both;
+    }
+    @keyframes fadeUp { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: none; } }
+
+    .bubble-bot {
+      align-self: flex-start;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+    .bubble-bot .bot-label {
+      font-size: 11px; font-weight: 700; color: var(--accent);
+      text-transform: uppercase; letter-spacing: .8px; margin-bottom: 6px;
+    }
+    .bubble-user {
+      align-self: flex-end;
+      background: linear-gradient(135deg, rgba(124,111,247,0.25), rgba(79,195,247,0.18));
+      border: 1px solid rgba(124,111,247,0.25);
+      border-bottom-right-radius: 4px;
+      color: var(--text);
+    }
+
+    /* Typing indicator */
+    .typing { display: flex; gap: 5px; align-items: center; padding: 14px 16px; }
+    .typing span {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--accent); opacity: .4;
+      animation: blink 1.2s infinite;
+    }
+    .typing span:nth-child(2) { animation-delay: .2s; }
+    .typing span:nth-child(3) { animation-delay: .4s; }
+    @keyframes blink { 0%,80%,100% { opacity:.4; transform: scale(1); } 40% { opacity:1; transform: scale(1.3); } }
+
+    /* Formatted message parts */
+    .msg-section { margin-bottom: 8px; }
+    .msg-section:last-child { margin-bottom: 0; }
+    .msg-label {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .8px; color: var(--accent2); margin-bottom: 4px;
+    }
+    .msg-pill-list { display: flex; flex-wrap: wrap; gap: 5px; }
+    .msg-pill {
+      padding: 3px 10px; border-radius: 20px; font-size: 12px;
+      background: rgba(79,195,247,0.08); border: 1px solid rgba(79,195,247,0.18);
+      color: var(--accent);
+    }
+    .msg-pill.warn { background: rgba(255,209,102,0.08); border-color: rgba(255,209,102,0.2); color: var(--warning); }
+    .msg-pill.danger { background: rgba(255,107,107,0.08); border-color: rgba(255,107,107,0.2); color: var(--danger); }
+    .msg-pill.ok { background: rgba(67,224,156,0.08); border-color: rgba(67,224,156,0.2); color: var(--success); }
+    .badge {
+      display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 700;
+      letter-spacing: .4px;
+    }
+    .badge-category { background: var(--pill); color: var(--accent); }
+    .divider { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
+
+    /* ── Chat input ── */
+    .input-row {
+      display: flex; gap: 10px; align-items: flex-end;
+      margin-top: 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      transition: border-color .2s;
+    }
+    .input-row:focus-within { border-color: rgba(79,195,247,0.35); }
+    .chat-textarea {
+      flex: 1; background: none; border: none; outline: none;
+      font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text);
+      resize: none; max-height: 120px; line-height: 1.5;
+    }
+    .chat-textarea::placeholder { color: var(--text-dim); }
+    .input-actions { display: flex; gap: 7px; align-items: center; }
+
+    /* ── Modal ── */
+    .overlay {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(5,8,16,0.75); backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .overlay.hidden { display: none; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 18px; padding: 28px 28px 24px; width: 420px; max-width: 96vw;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+      animation: fadeUp .2s ease both;
+    }
+    .modal h2 { font-family: 'Syne', sans-serif; font-size: 19px; font-weight: 800; margin-bottom: 4px; }
+    .modal p { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
+    .form-group { margin-bottom: 14px; }
+    .form-label { font-size: 12px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 6px; letter-spacing: .5px; text-transform: uppercase; }
+    .form-input {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 9px; padding: 10px 14px; font-size: 14px; color: var(--text);
+      font-family: inherit; outline: none; transition: border-color .2s;
+    }
+    .form-input:focus { border-color: var(--accent); }
+    .modal-actions { display: flex; gap: 10px; margin-top: 6px; }
+    .interaction-result { margin-top: 14px; border-radius: 10px; overflow: hidden; }
+
+    /* ── Toast ── */
+    .toasts { position: fixed; bottom: 24px; right: 24px; z-index: 300; display: flex; flex-direction: column; gap: 9px; }
+    .toast {
+      display: flex; align-items: center; gap: 9px;
+      padding: 11px 16px; border-radius: 10px; font-size: 13px; font-weight: 500;
+      background: var(--surface2); border: 1px solid var(--border);
+      animation: fadeUp .2s ease both;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .toast.success { border-color: rgba(67,224,156,0.3); color: var(--success); }
+    .toast.error { border-color: rgba(255,107,107,0.3); color: var(--danger); }
+    .toast.info { border-color: rgba(79,195,247,0.3); color: var(--accent); }
+
+    /* Fade-in on load */
+    .fade { animation: fadeUp .4s ease both; }
+    .fade-2 { animation-delay: .08s; }
+    .fade-3 { animation-delay: .16s; }
+    .fade-4 { animation-delay: .24s; }
+  </style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<!-- Nav -->
+<nav>
+  <a href="Home.html" class="nav-logo">
+    <div class="nav-logo-icon">💊</div>
+    <span class="nav-logo-text">PharmaAI</span>
+  </a>
+  <div class="nav-links">
+    <a href="Home.html" class="nav-link"><span>🏠</span> Home</a>
+    <a href="Chatbot.html" class="nav-link active"><span>🤖</span> AI Assistant</a>
+    <a href="NearbyMedical.html" class="nav-link"><span>📍</span> Nearby</a>
+    <a href="OrderMedicine.html" class="nav-link"><span>🛒</span> Order</a>
+    <a href="Reminder.html" class="nav-link"><span>⏰</span> Reminders</a>
+  </div>
+  <div class="nav-actions">
+    <div class="pulse-dot"></div>
+    <span style="font-size:12.5px;color:var(--success);font-weight:600;letter-spacing:.4px;">AI Online</span>
+  </div>
+</nav>
+
+<!-- Page -->
+<div class="page">
+  <div class="container">
+
+    <!-- Header -->
+    <div class="header fade">
+      <div>
+        <div class="header-title">🤖 AI Pharmacy Assistant</div>
+        <div class="header-sub">Powered by Claude AI · Ask about medicines, dosages, interactions, or symptoms</div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-outline btn-sm" onclick="clearChat()">🗑 Clear</button>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('modal').classList.remove('hidden')">⚠️ Interaction Check</button>
+      </div>
+    </div>
+
+    <!-- Chips -->
+    <div class="chips fade fade-2">
+      <span class="chip" onclick="quick('What is Paracetamol?')">💊 What is Paracetamol?</span>
+      <span class="chip" onclick="quick('Side effects of Ibuprofen')">⚠️ Ibuprofen side effects</span>
+      <span class="chip" onclick="quick('Amoxicillin dosage for adults')">💉 Amoxicillin dosage</span>
+      <span class="chip" onclick="quick('I have a fever, what medicine should I take?')">🤒 I have fever</span>
+      <span class="chip" onclick="quick('What are Metformin drug interactions?')">💊 Metformin interactions</span>
+      <span class="chip" onclick="quick('What medicine is good for a headache?')">🩺 Headache medicine</span>
+    </div>
+
+    <!-- Chat -->
+    <div class="chat-wrap fade fade-3" id="chat">
+      <div class="bubble bubble-bot">
+        <div class="bot-label">PharmaAI</div>
+        <strong>👋 Hello! I'm your AI Pharmacy Assistant.</strong><br/><br/>
+        I can help you with:<br/>
+        • Medicine information &amp; dosages<br/>
+        • Drug interaction checks<br/>
+        • Side effects &amp; warnings<br/>
+        • Symptom-based medicine suggestions<br/><br/>
+        How can I help you today? Even if you make a spelling mistake, I'll understand you! 😊
+      </div>
+    </div>
+
+    <!-- Input -->
+    <div class="input-row fade fade-4">
+      <textarea class="chat-textarea" id="inp" rows="1"
+        placeholder="Ask about a medicine or describe your symptoms…"
+        onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      <div class="input-actions">
+        <button class="btn btn-outline btn-sm" onclick="startVoice()" id="voiceBtn" title="Voice input">🎤</button>
+        <button class="btn btn-primary btn-sm" onclick="send()" id="sendBtn" style="padding:10px 20px;">Send ↗</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Interaction Modal -->
+<div id="modal" class="overlay hidden">
+  <div class="modal">
+    <h2>⚠️ Drug Interaction Checker</h2>
+    <p>Check if two medicines are safe to take together.</p>
+    <div class="form-group">
+      <label class="form-label">Medicine 1</label>
+      <input class="form-input" id="m1" placeholder="e.g. Paracetamol" list="medlist"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Medicine 2</label>
+      <input class="form-input" id="m2" placeholder="e.g. Ibuprofen" list="medlist"/>
+    </div>
+    <datalist id="medlist">
+      <option value="Paracetamol"><option value="Amoxicillin"><option value="Metformin">
+      <option value="Atorvastatin"><option value="Omeprazole"><option value="Cetirizine">
+      <option value="Ibuprofen"><option value="Lisinopril">
+    </datalist>
+    <div id="intResult"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" style="flex:1" onclick="checkInt()">Check Interaction</button>
+      <button class="btn btn-outline" onclick="document.getElementById('modal').classList.add('hidden')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toasts -->
+<div class="toasts" id="toasts"></div>
+
+<script>
+// ═══════════════════════════════════
+//  MEDICINE DATABASE
+// ═══════════════════════════════════
+const DB = [
+  {id:'med_001',name:'Paracetamol',generic:'Acetaminophen',aliases:['paracetamol','acetaminophen','panadol','tylenol','crocin','dolo','calpol'],cat:'Analgesic / Antipyretic',dosage:{adult:'500mg–1000mg every 4–6h (max 4g/day)',child:'10–15mg/kg every 4–6h'},uses:['Fever','Headache','Pain relief','Toothache','Cold & flu'],sideEffects:['Nausea (rare)','Liver damage on overdose','Allergic rash (rare)'],interactions:['Warfarin – may increase anticoagulant effect','Alcohol – raises liver damage risk'],contraindications:['Severe liver disease'],warnings:'Do not exceed 4g/day. Avoid alcohol. Safe in pregnancy when used at recommended doses.',storage:'Below 25°C',price:12},
+  {id:'med_002',name:'Amoxicillin',generic:'Amoxicillin trihydrate',aliases:['amoxicillin','amoxycillin','amoxil','trimox','biomox','moxatag','novamox'],cat:'Antibiotic (Penicillin)',dosage:{adult:'250mg–500mg every 8h for 5–10 days',child:'25–45mg/kg/day in divided doses'},uses:['Bacterial infections','Ear infections (otitis media)','Throat / tonsil infections','Urinary tract infections (UTI)','Pneumonia','H. pylori (with other drugs)'],sideEffects:['Diarrhea','Nausea / vomiting','Skin rash','Yeast infections'],interactions:['Warfarin – increased bleeding risk','Oral contraceptives – reduced efficacy','Methotrexate – raised toxicity risk'],contraindications:['Penicillin / beta-lactam allergy'],warnings:'Always complete the full antibiotic course. Report any rash immediately.',storage:'Room temperature (suspension must be refrigerated)',price:45},
+  {id:'med_003',name:'Metformin',generic:'Metformin HCl',aliases:['metformin','glucophage','glycomet','fortamet','riomet'],cat:'Antidiabetic (Biguanide)',dosage:{adult:'500mg–1000mg twice daily with meals',child:'500mg–2000mg/day for patients >10yrs'},uses:['Type 2 diabetes','PCOS (polycystic ovary syndrome)','Pre-diabetes / insulin resistance'],sideEffects:['Nausea','Diarrhea','Stomach upset','B12 deficiency (long-term)','Lactic acidosis (rare, serious)'],interactions:['Alcohol – lactic acidosis risk','Iodinated contrast dye – hold 48h before imaging','Cimetidine – raises metformin level'],contraindications:['eGFR < 30 (severe kidney disease)','Liver disease','Dehydration','Sepsis'],warnings:'Stop before surgery or CT scan with contrast. Take with food to reduce GI side effects.',storage:'Room temperature',price:30},
+  {id:'med_004',name:'Atorvastatin',generic:'Atorvastatin calcium',aliases:['atorvastatin','lipitor','atorva','storvas','tonact'],cat:'Statin (Lipid-lowering)',dosage:{adult:'10mg–80mg once daily at any time of day',child:'Not recommended under 10 years'},uses:['High LDL cholesterol','Cardiovascular disease prevention','After heart attack or stroke'],sideEffects:['Muscle pain or weakness','Liver enzyme elevation','Headache','Digestive upset'],interactions:['Cyclosporine','Grapefruit juice – avoid','Fibrates – increased muscle risk','Clarithromycin'],contraindications:['Active liver disease','Pregnancy','Breastfeeding'],warnings:'Avoid grapefruit. Report any unexplained muscle pain or weakness to your doctor.',storage:'Room temperature, away from moisture',price:55},
+  {id:'med_005',name:'Omeprazole',generic:'Omeprazole magnesium',aliases:['omeprazole','prilosec','losec','omez','ocid'],cat:'Proton Pump Inhibitor (PPI)',dosage:{adult:'20mg–40mg once daily before breakfast',child:'0.7–1.4mg/kg/day'},uses:['Acid reflux (GERD)','Peptic / stomach ulcers','H. pylori eradication','Zollinger-Ellison syndrome','NSAID-induced gastric protection'],sideEffects:['Headache','Diarrhea','Nausea','B12 deficiency (long-term)','Magnesium deficiency'],interactions:['Clopidogrel – reduced antiplatelet effect','Methotrexate – raised levels','Ketoconazole – reduced absorption'],contraindications:['PPI hypersensitivity'],warnings:'Long-term use (>1 year) may reduce B12 and magnesium. Take before meals for best effect.',storage:'Below 25°C, keep dry',price:38},
+  {id:'med_006',name:'Cetirizine',generic:'Cetirizine HCl',aliases:['cetirizine','zyrtec','reactine','okacet','cetzine','alerid'],cat:'Antihistamine (2nd gen)',dosage:{adult:'10mg once daily',child:'5mg once or twice daily (6–11yrs)'},uses:['Allergic rhinitis (hay fever)','Urticaria (hives)','Itching','Seasonal allergies','Allergic conjunctivitis'],sideEffects:['Mild drowsiness','Dry mouth','Fatigue','Headache'],interactions:['Alcohol – increased sedation','CNS depressants – enhanced sedation','Theophylline – slight increase in exposure'],contraindications:['Severe kidney disease (CrCl<10)'],warnings:'May cause drowsiness. Avoid driving if affected. Safe in most ages.',storage:'Below 30°C',price:22},
+  {id:'med_007',name:'Ibuprofen',generic:'Ibuprofen',aliases:['ibuprofen','advil','nurofen','brufen','combiflam','ibumol'],cat:'NSAID (Anti-inflammatory)',dosage:{adult:'200mg–400mg every 4–6h (max 1200mg/day OTC)',child:'5–10mg/kg every 6–8h'},uses:['Mild to moderate pain','Inflammation','Fever','Arthritis','Menstrual cramps','Dental pain'],sideEffects:['Stomach upset / gastritis','Nausea','Headache','Kidney strain (prolonged use)','Fluid retention'],interactions:['Aspirin – GI bleed risk (avoid together)','Blood thinners (warfarin, heparin)','Lithium – raised lithium level','Lisinopril / ACE inhibitors – reduced blood pressure effect','Methotrexate'],contraindications:['Peptic ulcer','Kidney disease','Third trimester pregnancy','Asthma triggered by NSAIDs'],warnings:'Always take with food or milk. Avoid with kidney disease. Not recommended in last trimester of pregnancy.',storage:'Below 25°C',price:18},
+  {id:'med_008',name:'Lisinopril',generic:'Lisinopril',aliases:['lisinopril','zestril','prinivil','listril','pril'],cat:'ACE Inhibitor',dosage:{adult:'5mg–40mg once daily',child:'0.07mg/kg once daily (>6yrs)'},uses:['Hypertension (high blood pressure)','Heart failure','Post-heart attack (post-MI) protection','Diabetic kidney disease'],sideEffects:['Dry persistent cough','Dizziness / hypotension on first dose','Hyperkalemia (high potassium)','Kidney function changes'],interactions:['Potassium supplements / salt substitutes','NSAIDs – reduced efficacy & kidney risk','Diuretics – first-dose hypotension','Lithium – raised lithium levels'],contraindications:['Pregnancy (teratogenic)','History of angioedema','Bilateral renal artery stenosis'],warnings:'Call your doctor immediately if face or throat swells (angioedema). Monitor potassium and kidney function regularly.',storage:'Room temperature',price:42},
+];
+
+// ═══════════════════════════════════
+//  FUZZY MATCHING (Levenshtein)
+// ═══════════════════════════════════
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({length: m+1}, (_, i) => Array.from({length: n+1}, (_, j) => j === 0 ? i : j === 0 ? j : 0));
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j-1], dp[i-1][j], dp[i][j-1]);
+  return dp[m][n];
+}
+
+function findMed(query) {
+  const q = query.toLowerCase().trim();
+  // exact alias match
+  for (const m of DB) if (m.aliases.some(a => q.includes(a))) return m;
+  // fuzzy: check each word in query against all aliases
+  const words = q.split(/\s+/);
+  let best = null, bestScore = Infinity;
+  for (const med of DB) {
+    for (const alias of med.aliases) {
+      for (const word of words) {
+        if (word.length < 4) continue;
+        const score = levenshtein(word, alias);
+        const threshold = alias.length > 7 ? 3 : alias.length > 5 ? 2 : 1;
+        if (score <= threshold && score < bestScore) {
+          bestScore = score; best = med;
+        }
+      }
+    }
+  }
+  return best;
+}
+
+// ═══════════════════════════════════
+//  SYMPTOM MAP
+// ═══════════════════════════════════
+const SYMPTOMS = {
+  'fever':['Paracetamol','Ibuprofen'],
+  'temperature':['Paracetamol'],
+  'pain':['Paracetamol','Ibuprofen'],
+  'headache':['Paracetamol','Ibuprofen'],
+  'migraine':['Ibuprofen','Paracetamol'],
+  'allerg':['Cetirizine'],
+  'sneez':['Cetirizine'],
+  'runny nose':['Cetirizine'],
+  'itching':['Cetirizine'],
+  'hives':['Cetirizine'],
+  'cold':['Cetirizine','Paracetamol'],
+  'flu':['Paracetamol','Cetirizine'],
+  'cough':['Cetirizine'],
+  'diabetes':['Metformin'],
+  'blood sugar':['Metformin'],
+  'sugar':['Metformin'],
+  'cholesterol':['Atorvastatin'],
+  'blood pressure':['Lisinopril'],
+  'hypertension':['Lisinopril'],
+  'bp ':['Lisinopril'],
+  'acid':['Omeprazole'],
+  'reflux':['Omeprazole'],
+  'heartburn':['Omeprazole'],
+  'ulcer':['Omeprazole'],
+  'stomach':['Omeprazole'],
+  'infection':['Amoxicillin'],
+  'antibiotic':['Amoxicillin'],
+  'bacteria':['Amoxicillin'],
+  'inflammat':['Ibuprofen'],
+  'arthritis':['Ibuprofen'],
+  'swelling':['Ibuprofen'],
+  'tooth':['Ibuprofen','Paracetamol'],
+  'dental':['Ibuprofen'],
+  'period pain':['Ibuprofen'],
+  'menstrual':['Ibuprofen'],
+};
+
+// ═══════════════════════════════════
+//  FORMAT MEDICINE CARD (bubble HTML)
+// ═══════════════════════════════════
+function medCard(med, intent) {
+  const q = intent || 'general';
+
+  if (q === 'sideeffects') return `
+    <div class="bot-label">Side Effects — ${med.name}</div>
+    <div class="msg-section">
+      <div class="msg-label">Common Side Effects</div>
+      <div class="msg-pill-list">${med.sideEffects.map(s=>`<span class="msg-pill warn">⚠️ ${s}</span>`).join('')}</div>
+    </div>
+    <hr class="divider"/>
+    <div class="msg-section">
+      <div class="msg-label">Warnings</div>
+      <div style="font-size:13px;color:var(--text-muted)">${med.warnings}</div>
+    </div>
+    <div class="msg-section" style="margin-top:8px">
+      <div class="msg-label">Contraindications</div>
+      <div class="msg-pill-list">${med.contraindications.map(c=>`<span class="msg-pill danger">🚫 ${c}</span>`).join('')}</div>
+    </div>`;
+
+  if (q === 'dosage') return `
+    <div class="bot-label">Dosage — ${med.name}</div>
+    <div class="msg-section">
+      <div class="msg-label">Adult Dose</div>
+      <div style="font-size:14px;color:var(--text)">${med.dosage.adult}</div>
+    </div>
+    <div class="msg-section" style="margin-top:8px">
+      <div class="msg-label">Child Dose</div>
+      <div style="font-size:14px;color:var(--text)">${med.dosage.child}</div>
+    </div>
+    <hr class="divider"/>
+    <div style="font-size:13px;color:var(--text-muted)">⚠️ ${med.warnings}</div>`;
+
+  if (q === 'uses') return `
+    <div class="bot-label">Uses — ${med.name}</div>
+    <div class="msg-pill-list">${med.uses.map(u=>`<span class="msg-pill ok">✅ ${u}</span>`).join('')}</div>`;
+
+  if (q === 'interactions') return `
+    <div class="bot-label">Drug Interactions — ${med.name}</div>
+    <div class="msg-section">
+      ${med.interactions.map(i=>`<div style="padding:7px 0;border-bottom:1px solid var(--border);font-size:13.5px">⚠️ ${i}</div>`).join('')}
+    </div>
+    <div style="margin-top:10px;font-size:12.5px;color:var(--text-muted)">Always consult your pharmacist or doctor before combining medicines.</div>`;
+
+  if (q === 'storage') return `
+    <div class="bot-label">Storage — ${med.name}</div>
+    <div style="font-size:14px">📦 ${med.storage}</div>`;
+
+  if (q === 'price') return `
+    <div class="bot-label">Price — ${med.name}</div>
+    <div style="font-size:22px;font-weight:700;color:var(--accent)">₹${med.price} <span style="font-size:14px;font-weight:400;color:var(--text-muted)">per strip</span></div>`;
+
+  if (q === 'warnings') return `
+    <div class="bot-label">Warnings & Precautions — ${med.name}</div>
+    <div style="font-size:14px;margin-bottom:10px">${med.warnings}</div>
+    <div class="msg-label">Contraindications</div>
+    <div class="msg-pill-list">${med.contraindications.map(c=>`<span class="msg-pill danger">🚫 ${c}</span>`).join('')}</div>`;
+
+  // General info card
+  return `
+    <div class="bot-label">Medicine Info</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <div style="font-size:20px;font-weight:800">${med.name}</div>
+      <span class="badge badge-category">${med.cat}</span>
+    </div>
+    <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:10px">Generic: ${med.generic}</div>
+    <div class="msg-section">
+      <div class="msg-label">Uses</div>
+      <div class="msg-pill-list">${med.uses.slice(0,4).map(u=>`<span class="msg-pill ok">✅ ${u}</span>`).join('')}</div>
+    </div>
+    <div class="msg-section" style="margin-top:8px">
+      <div class="msg-label">Adult Dosage</div>
+      <div style="font-size:13.5px">${med.dosage.adult}</div>
+    </div>
+    <div class="msg-section" style="margin-top:8px">
+      <div class="msg-label">Side Effects</div>
+      <div class="msg-pill-list">${med.sideEffects.slice(0,3).map(s=>`<span class="msg-pill warn">⚠️ ${s}</span>`).join('')}</div>
+    </div>
+    <hr class="divider"/>
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px">
+      <span style="color:var(--text-muted)">💰 ₹${med.price}/strip</span>
+      <span style="color:var(--text-muted)">📦 ${med.storage}</span>
+    </div>`;
+}
+
+// ═══════════════════════════════════
+//  LOCAL INTENT + RULE-BASED BOT
+// ═══════════════════════════════════
+function getIntent(m) {
+  if (m.match(/side.?effect|reaction|adverse|harmful/)) return 'sideeffects';
+  if (m.match(/dos(age|e)|how.?(much|many|often)|mg|tablet|strength/)) return 'dosage';
+  if (m.match(/use(d|s)?|treat|for what|good for|help with|works for/)) return 'uses';
+  if (m.match(/interact|mix|combin|together|with what|can i take/)) return 'interactions';
+  if (m.match(/stor(e|age)|keep|refrigerat/)) return 'storage';
+  if (m.match(/price|cost|₹|rupee|how much/)) return 'price';
+  if (m.match(/warn|precaution|avoid|contraindic|safe/)) return 'warnings';
+  return 'general';
+}
+
+function localReply(msg) {
+  const m = msg.toLowerCase();
+  const med = findMed(m);
+  if (med) return { type:'card', med, intent: getIntent(m) };
+
+  for (const [sym, drugs] of Object.entries(SYMPTOMS)) {
+    if (m.includes(sym)) {
+      return { type:'text', html: `<div class="bot-label">Symptom Suggestions</div>
+        <div style="font-size:13.5px;margin-bottom:10px">For <strong>${sym.trim()}</strong>, commonly recommended medicines:</div>
+        <div class="msg-pill-list">${drugs.map(d=>`<span class="msg-pill ok">💊 ${d}</span>`).join('')}</div>
+        <hr class="divider"/>
+        <div style="font-size:12.5px;color:var(--text-muted)">⚠️ Always consult a pharmacist or doctor before use. This is general guidance only.</div>` };
+    }
+  }
+
+  if (m.match(/^(hi|hello|hey|good morning|good evening|namaste)\b/))
+    return { type:'text', html:`<div class="bot-label">PharmaAI</div>👋 Hello! I'm your AI Pharmacy Assistant powered by Claude.<br/><br/>Ask me about any medicine by name, or describe your symptoms — I'll understand even if you make a spelling mistake!` };
+
+  if (m.includes('thank'))
+    return { type:'text', html:`<div class="bot-label">PharmaAI</div>You're welcome! 😊 Stay healthy and take care. Feel free to ask me anything!` };
+
+  if (m.includes('list') || m.includes('all medicine'))
+    return { type:'text', html:`<div class="bot-label">Available Medicines</div><div class="msg-pill-list">${DB.map(m=>`<span class="msg-pill">${m.name}</span>`).join('')}</div>` };
+
+  return null; // let Claude handle it
+}
+
+// ═══════════════════════════════════
+//  CLAUDE API CALL
+// ═══════════════════════════════════
+async function askClaude(message) {
+  const systemPrompt = `You are PharmaAI, a knowledgeable and friendly pharmacy assistant. You help users with:
+- Medicine information, dosages, uses, side effects
+- Drug interactions and safety warnings
+- Symptom-based medicine suggestions
+- General health guidance
+
+Medicine database you know well: ${DB.map(m=>`${m.name} (${m.generic}): used for ${m.uses.join(', ')}; dosage: adults ${m.dosage.adult}; side effects: ${m.sideEffects.join(', ')}; interactions: ${m.interactions.join(', ')}; warnings: ${m.warnings}`).join(' | ')}
+
+Rules:
+- Always mention "consult a doctor or pharmacist" for diagnosis or prescription decisions
+- Be concise but thorough — 2–6 sentences unless more detail is requested
+- Use plain language, avoid jargon
+- If the user misspells a medicine name, understand their intent and answer correctly
+- Never diagnose diseases — only suggest common OTC medicines for symptoms
+- Format responses clearly with line breaks when listing multiple points`;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: message }]
+    })
+  });
+  if (!res.ok) throw new Error('API error');
+  const data = await res.json();
+  return data.content.map(b => b.text || '').join('');
+}
+
+// ═══════════════════════════════════
+//  CHAT UI
+// ═══════════════════════════════════
+const chatEl = document.getElementById('chat');
+
+function addBubble(html, role) {
+  const div = document.createElement('div');
+  div.className = `bubble bubble-${role}`;
+  div.innerHTML = html;
+  chatEl.appendChild(div);
+  chatEl.scrollTop = chatEl.scrollHeight;
+  return div;
+}
+
+function showTyping() {
+  const div = document.createElement('div');
+  div.className = 'bubble bubble-bot';
+  div.id = 'typing';
+  div.innerHTML = `<div class="typing"><span></span><span></span><span></span></div>`;
+  chatEl.appendChild(div);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+function formatTextReply(text) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/\n/g, '<br/>');
+}
+
+async function send() {
+  const inp = document.getElementById('inp');
+  const msg = inp.value.trim();
+  if (!msg) return;
+  inp.value = ''; inp.style.height = 'auto';
+
+  addBubble(msg, 'user');
+  showTyping();
+
+  // Small delay for UX
+  await new Promise(r => setTimeout(r, 400 + Math.random() * 500));
+  document.getElementById('typing')?.remove();
+
+  // 1. Try local rule-based reply (fast, formatted cards)
+  const local = localReply(msg);
+  if (local) {
+    if (local.type === 'card') {
+      addBubble(medCard(local.med, local.intent), 'bot');
+    } else {
+      addBubble(local.html, 'bot');
+    }
+    return;
+  }
+
+  // 2. Fallback to Claude API for complex / unknown queries
+  try {
+    const reply = await askClaude(msg);
+    addBubble(`<div class="bot-label">PharmaAI · Claude</div>${formatTextReply(reply)}`, 'bot');
+  } catch {
+    // 3. Final fallback: generic message
+    addBubble(`<div class="bot-label">PharmaAI</div>I'm having trouble connecting right now. Try asking about a specific medicine like "Paracetamol dosage" or describe symptoms like "I have a fever". 💊`, 'bot');
+  }
+}
+
+function quick(text) { document.getElementById('inp').value = text; send(); }
+function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }
+function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
+function clearChat() {
+  chatEl.innerHTML = '';
+  addBubble(`<div class="bot-label">PharmaAI</div>Chat cleared! How can I help you? 💊`, 'bot');
+}
+
+// ═══════════════════════════════════
+//  VOICE INPUT
+// ═══════════════════════════════════
+function startVoice() {
+  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    toast('Voice input not supported in this browser.', 'error'); return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const r = new SR();
+  r.lang = 'en-US';
+  document.getElementById('voiceBtn').textContent = '🔴';
+  r.onresult = e => {
+    document.getElementById('inp').value = e.results[0][0].transcript;
+    document.getElementById('voiceBtn').textContent = '🎤';
+  };
+  r.onend = () => document.getElementById('voiceBtn').textContent = '🎤';
+  r.start();
+}
+
+// ═══════════════════════════════════
+//  INTERACTION CHECKER
+// ═══════════════════════════════════
+function checkInt() {
+  const n1 = document.getElementById('m1').value.trim();
+  const n2 = document.getElementById('m2').value.trim();
+  if (!n1 || !n2) { toast('Enter both medicine names', 'error'); return; }
+
+  const med1 = DB.find(m => m.aliases.some(a => a === n1.toLowerCase())) || DB.find(m => m.name.toLowerCase() === n1.toLowerCase());
+  const med2 = DB.find(m => m.aliases.some(a => a === n2.toLowerCase())) || DB.find(m => m.name.toLowerCase() === n2.toLowerCase());
+
+  const el = document.getElementById('intResult');
+  if (!med1 || !med2) {
+    el.innerHTML = `<div class="interaction-result" style="padding:14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;font-size:13.5px;color:var(--text-muted)">One or both medicines not found in database. Try exact names like "Paracetamol".</div>`;
+    return;
+  }
+
+  const found = med1.interactions.filter(i => i.toLowerCase().includes(med2.name.toLowerCase()));
+  const safe = found.length === 0;
+
+  el.innerHTML = `<div class="interaction-result" style="padding:16px;background:var(--surface2);border:1px solid ${safe?'rgba(67,224,156,0.3)':'rgba(255,107,107,0.3)'};border-radius:10px">
+    <div style="font-size:15px;font-weight:700;color:${safe?'var(--success)':'var(--danger)'};margin-bottom:8px">
+      ${safe ? '✅ No known interactions found' : '⚠️ Interaction detected'}
+    </div>
+    <div style="font-size:13.5px;color:var(--text-muted)">
+      ${safe
+        ? `<strong>${n1}</strong> and <strong>${n2}</strong> appear safe to take together. Always confirm with your pharmacist.`
+        : `${found.join('<br/>')}.<br/><br/>Consult your doctor before combining these medicines.`}
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════
+function toast(msg, type='info') {
+  const wrap = document.getElementById('toasts');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+  t.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
+  wrap.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+</script>
+</body>
+</html>
